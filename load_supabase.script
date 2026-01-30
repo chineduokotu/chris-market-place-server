@@ -1,0 +1,7 @@
+LOAD DATABASE
+     FROM /data/database.sqlite
+     INTO postgresql://postgres:[YOUR-PASSWORD]@db.urjquzycytreqwdytpok.supabase.co:5432/postgres
+
+ WITH include drop, create tables, create indexes, reset sequences
+
+ SET work_mem to '16MB', maintenance_work_mem to '512 MB';
