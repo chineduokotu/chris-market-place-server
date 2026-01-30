@@ -1,0 +1,20 @@
+services:
+  -显示名称: backend
+    type: web
+    env: docker
+    plan: free
+    region: frankfurt # Or your preferred region
+    healthCheckPath: /
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: APP_KEY
+        fromContext: APP_KEY
+      - key: DB_URL
+        fromContext: DB_URL

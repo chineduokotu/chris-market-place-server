@@ -21,6 +21,9 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy application files
 COPY . .
 
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
@@ -34,3 +37,10 @@ RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
 # Expose port 80
 EXPOSE 80
+
+# Copy start script
+COPY start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+
+# Use start script
+CMD ["/usr/local/bin/start.sh"]
