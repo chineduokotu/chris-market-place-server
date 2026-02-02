@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Service;
+use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
 
 class ServiceController extends Controller
@@ -25,7 +26,7 @@ class ServiceController extends Controller
         return response()->json($service);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, CloudinaryService $cloudinary)
     {
         if ($request->user()->current_role !== 'provider') {
             return response()->json(['message' => 'Only providers can create services'], 403);
@@ -43,8 +44,13 @@ class ServiceController extends Controller
 
         // Handle image upload
         if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('services', 'public');
-            $serviceData['image'] = '/storage/' . $imagePath;
+            try {
+                $upload = $cloudinary->uploadServiceImage($request->file('image'));
+                $serviceData['image'] = $upload['url'];
+                $serviceData['image_public_id'] = $upload['public_id'];
+            } catch (\Throwable $e) {
+                return response()->json(['message' => 'Image upload failed'], 500);
+            }
         }
 
         $service = $request->user()->services()->create($serviceData);
@@ -52,9 +58,10 @@ class ServiceController extends Controller
         return response()->json($service->load(['user', 'category']), 201);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $id, CloudinaryService $cloudinary)
     {
         $service = Service::findOrFail($id);
+        $oldPublicId = $service->image_public_id;
 
         if ($service->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
@@ -71,21 +78,42 @@ class ServiceController extends Controller
 
         // Handle image upload
         if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('services', 'public');
-            $updateData['image'] = '/storage/' . $imagePath;
+            try {
+                $upload = $cloudinary->uploadServiceImage($request->file('image'));
+                $updateData['image'] = $upload['url'];
+                $updateData['image_public_id'] = $upload['public_id'];
+            } catch (\Throwable $e) {
+                return response()->json(['message' => 'Image upload failed'], 500);
+            }
         }
 
         $service->update($updateData);
 
+        if ($request->hasFile('image')) {
+            try {
+                $cloudinary->deleteImage($oldPublicId);
+            } catch (\Throwable $e) {
+                // Best-effort cleanup; do not fail the request.
+            }
+        }
+
         return response()->json($service->load(['user', 'category']));
     }
 
-    public function destroy(Request $request, $id)
+    public function destroy(Request $request, $id, CloudinaryService $cloudinary)
     {
         $service = Service::findOrFail($id);
 
         if ($service->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if ($service->image_public_id) {
+            try {
+                $cloudinary->deleteImage($service->image_public_id);
+            } catch (\Throwable $e) {
+                // Best-effort cleanup; do not fail the request.
+            }
         }
 
         $service->delete();
