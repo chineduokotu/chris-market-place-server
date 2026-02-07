@@ -1,5 +1,6 @@
 # PHP 8.2 with Apache
-FROM php:8.2-apache
+FROM php:8.2-apache 
+# this where we spacify  docker image we are using.
 
 # Install system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \

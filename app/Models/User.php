@@ -20,7 +20,7 @@ class User extends Authenticatable
         'whatsapp_number',
     ];
 
-    protected $appends = ['whatsapp_link'];
+    protected $appends = ['whatsapp_link', 'verification_level', 'verification_badges'];
 
     protected $attributes = [
         'current_role' => 'seeker',
@@ -72,5 +72,33 @@ class User extends Authenticatable
         // Remove non-numeric characters for the link
         $cleanNumber = preg_replace('/[^0-9]/', '', $this->whatsapp_number);
         return "https://wa.me/{$cleanNumber}";
+    }
+
+    public function getVerificationLevelAttribute()
+    {
+        $emailVerified = !is_null($this->email_verified_at);
+        $phoneOnFile = !empty($this->phone) || !empty($this->whatsapp_number);
+
+        if ($emailVerified && $phoneOnFile) {
+            return 'verified';
+        }
+        if ($emailVerified) {
+            return 'basic';
+        }
+        return 'unverified';
+    }
+
+    public function getVerificationBadgesAttribute()
+    {
+        $badges = [];
+
+        if (!is_null($this->email_verified_at)) {
+            $badges[] = 'email_verified';
+        }
+        if (!empty($this->phone) || !empty($this->whatsapp_number)) {
+            $badges[] = 'phone_on_file';
+        }
+
+        return $badges;
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Service;
 use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class ServiceController extends Controller
 {
@@ -15,14 +16,35 @@ class ServiceController extends Controller
         if ($request->has('category_id')) {
             $query->where('category_id', $request->category_id);
         }
+        if ($request->has('provider_id')) {
+            $query->where('user_id', $request->provider_id);
+        }
+        if (Schema::hasTable('reviews')) {
+            $query->withAvg('reviews', 'rating')->withCount('reviews');
+        }
 
         $services = $query->latest()->paginate(12);
+        if (Schema::hasTable('reviews')) {
+            $services->getCollection()->transform(function ($service) {
+                $service->rating = $service->reviews_avg_rating ? (float) $service->reviews_avg_rating : null;
+                $service->review_count = $service->reviews_count ?? 0;
+                return $service;
+            });
+        }
         return response()->json($services);
     }
 
     public function show($id)
     {
-        $service = Service::with(['user', 'category'])->findOrFail($id);
+        $serviceQuery = Service::with(['user', 'category']);
+        if (Schema::hasTable('reviews')) {
+            $serviceQuery->withAvg('reviews', 'rating')->withCount('reviews');
+        }
+        $service = $serviceQuery->findOrFail($id);
+        if (Schema::hasTable('reviews')) {
+            $service->rating = $service->reviews_avg_rating ? (float) $service->reviews_avg_rating : null;
+            $service->review_count = $service->reviews_count ?? 0;
+        }
         return response()->json($service);
     }
 
