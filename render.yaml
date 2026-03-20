@@ -1,5 +1,5 @@
 services:
-  -显示名称: backend
+  - name: backend
     type: web
     env: docker
     plan: free
