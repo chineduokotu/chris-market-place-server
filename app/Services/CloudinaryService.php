@@ -26,7 +26,7 @@ class CloudinaryService
         $url = $result['secure_url'] ?? $result['url'] ?? null;
         $publicId = $result['public_id'] ?? null;
 
-        if (!$url || !$publicId) {
+        if (! $url || ! $publicId) {
             throw new RuntimeException('Cloudinary upload failed.');
         }
 
@@ -38,7 +38,7 @@ class CloudinaryService
 
     public function deleteImage(?string $publicId): void
     {
-        if (!$publicId) {
+        if (! $publicId) {
             return;
         }
 

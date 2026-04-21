@@ -5,15 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\Review;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 
 class ReviewController extends Controller
 {
     public function indexByService($serviceId)
     {
-        if (!Schema::hasTable('reviews')) {
-            return response()->json([]);
-        }
 
         $reviews = Review::with('seeker:id,name')
             ->where('service_id', $serviceId)
@@ -37,9 +33,6 @@ class ReviewController extends Controller
 
     public function indexByProvider($providerId)
     {
-        if (!Schema::hasTable('reviews')) {
-            return response()->json([]);
-        }
 
         $reviews = Review::with('seeker:id,name')
             ->where('provider_id', $providerId)
@@ -63,9 +56,6 @@ class ReviewController extends Controller
 
     public function store(Request $request)
     {
-        if (!Schema::hasTable('reviews')) {
-            return response()->json(['message' => 'Reviews are not enabled yet.'], 503);
-        }
 
         $request->validate([
             'booking_id' => 'required|exists:bookings,id',

@@ -2,94 +2,172 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
+use App\Models\Review;
 use App\Models\Service;
+use App\Models\User;
 use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class ServiceController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Service::with(['user', 'category']);
+        $query = Service::query()
+            ->leftJoin('users', 'services.user_id', '=', 'users.id')
+            ->leftJoin('categories', 'services.category_id', '=', 'categories.id')
+            ->select([
+                'services.id',
+                'services.user_id',
+                'services.category_id',
+                'services.title',
+                'services.description',
+                'services.location',
+                'services.price',
+                'services.image',
+                'services.image_public_id',
+                'services.created_at',
+                'services.updated_at',
+                'users.name as provider_name',
+                'users.current_role as provider_current_role',
+                'users.email_verified_at as provider_email_verified_at',
+                'users.phone as provider_phone',
+                'users.whatsapp_number as provider_whatsapp_number',
+                'categories.id as category_ref_id',
+                'categories.name as category_name',
+                'categories.slug as category_slug',
+                'categories.group_name as category_group_name',
+                'categories.icon as category_icon',
+            ])
+            ->selectSub(
+                Review::query()
+                    ->selectRaw('AVG(rating)')
+                    ->whereColumn('reviews.service_id', 'services.id'),
+                'reviews_avg_rating'
+            )
+            ->selectSub(
+                Review::query()
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('reviews.service_id', 'services.id'),
+                'reviews_count'
+            );
 
         $search = trim((string) $request->input('q', ''));
         if ($search !== '') {
-            $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search) . '%';
+            $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search).'%';
             $query->where(function ($searchQuery) use ($like) {
                 $searchQuery
-                    ->where('title', 'like', $like)
-                    ->orWhere('description', 'like', $like)
-                    ->orWhere('location', 'like', $like)
-                    ->orWhereHas('category', function ($categoryQuery) use ($like) {
-                        $categoryQuery->where('name', 'like', $like);
-                    })
-                    ->orWhereHas('user', function ($userQuery) use ($like) {
-                        $userQuery->where('name', 'like', $like);
-                    });
+                    ->where('services.title', 'like', $like)
+                    ->orWhere('services.description', 'like', $like)
+                    ->orWhere('services.location', 'like', $like)
+                    ->orWhere('categories.name', 'like', $like)
+                    ->orWhere('categories.slug', 'like', $like)
+                    ->orWhere('users.name', 'like', $like);
             });
         }
 
         $categoryFilter = $request->input('category_id', $request->input('category'));
-        if (!is_null($categoryFilter) && $categoryFilter !== '') {
+        if (! is_null($categoryFilter) && $categoryFilter !== '') {
             if (is_numeric($categoryFilter)) {
-                $query->where('category_id', (int) $categoryFilter);
+                $query->where('services.category_id', (int) $categoryFilter);
             } else {
                 $normalizedCategory = strtolower(trim((string) $categoryFilter));
-                $query->whereHas('category', function ($categoryQuery) use ($normalizedCategory) {
+                $query->where(function ($categoryQuery) use ($normalizedCategory) {
                     $categoryQuery
-                        ->whereRaw('LOWER(name) = ?', [$normalizedCategory])
-                        ->orWhereRaw('LOWER(slug) = ?', [$normalizedCategory]);
+                        ->whereRaw('LOWER(categories.name) = ?', [$normalizedCategory])
+                        ->orWhereRaw('LOWER(categories.slug) = ?', [$normalizedCategory]);
                 });
             }
         }
 
         $locationFilter = trim((string) $request->input('location', ''));
         if ($locationFilter !== '') {
-            $locationLike = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $locationFilter) . '%';
-            $query->where('location', 'like', $locationLike);
+            $locationLike = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $locationFilter).'%';
+            $query->where('services.location', 'like', $locationLike);
+        }
+
+        if ($request->input('verified') == 1) {
+            $query->whereNotNull('users.email_verified_at')
+                ->where(function ($verifiedQuery) {
+                    $verifiedQuery
+                        ->whereNotNull('users.phone')
+                        ->orWhereNotNull('users.whatsapp_number');
+                });
         }
 
         if ($request->has('provider_id')) {
-            $query->where('user_id', $request->provider_id);
-        }
-        if (Schema::hasTable('reviews')) {
-            $query->withAvg('reviews', 'rating')->withCount('reviews');
+            $query->where('services.user_id', $request->provider_id);
         }
 
         $perPage = max(1, min((int) $request->input('per_page', 12), 48));
         $sort = $request->input('sort', 'recent');
         if ($sort === 'price_low_high') {
-            $query->orderBy('price', 'asc')->orderByDesc('id');
+            $query->orderBy('services.price', 'asc')->orderByDesc('services.id');
         } elseif ($sort === 'price_high_low') {
-            $query->orderBy('price', 'desc')->orderByDesc('id');
+            $query->orderBy('services.price', 'desc')->orderByDesc('services.id');
         } else {
-            $query->latest();
+            $query->latest('services.created_at');
         }
 
         $services = $query->paginate($perPage);
-        if (Schema::hasTable('reviews')) {
-            $services->getCollection()->transform(function ($service) {
-                $service->rating = $service->reviews_avg_rating ? (float) $service->reviews_avg_rating : null;
-                $service->review_count = $service->reviews_count ?? 0;
-                return $service;
-            });
-        }
+        $services->getCollection()->transform(function ($service) {
+            $emailVerifiedAt = $service->provider_email_verified_at;
+
+            $provider = new User();
+            $provider->forceFill([
+                'id' => $service->user_id,
+                'name' => $service->provider_name,
+                'current_role' => $service->provider_current_role,
+                'email_verified_at' => $emailVerifiedAt,
+                'phone' => $service->provider_phone,
+                'whatsapp_number' => $service->provider_whatsapp_number,
+            ]);
+
+            $serviceCategory = null;
+            if ($service->category_ref_id) {
+                $serviceCategory = new Category();
+                $serviceCategory->forceFill([
+                    'id' => $service->category_ref_id,
+                    'name' => $service->category_name,
+                    'slug' => $service->category_slug,
+                    'group_name' => $service->category_group_name,
+                    'icon' => $service->category_icon,
+                ]);
+            }
+
+            $service->setRelation('user', $provider);
+            $service->setRelation('category', $serviceCategory);
+            $service->rating = $service->reviews_avg_rating ? (float) $service->reviews_avg_rating : null;
+            $service->review_count = $service->reviews_count ?? 0;
+
+            unset(
+                $service->provider_name,
+                $service->provider_current_role,
+                $service->provider_email_verified_at,
+                $service->provider_phone,
+                $service->provider_whatsapp_number,
+                $service->category_ref_id,
+                $service->category_name,
+                $service->category_slug,
+                $service->category_group_name,
+                $service->category_icon
+            );
+
+            return $service;
+        });
+
         return response()->json($services);
     }
 
     public function show($id)
     {
         $serviceQuery = Service::with(['user', 'category']);
-        if (Schema::hasTable('reviews')) {
-            $serviceQuery->withAvg('reviews', 'rating')->withCount('reviews');
-        }
+        $serviceQuery->withAvg('reviews', 'rating')->withCount('reviews');
         $service = $serviceQuery->findOrFail($id);
-        if (Schema::hasTable('reviews')) {
-            $service->rating = $service->reviews_avg_rating ? (float) $service->reviews_avg_rating : null;
-            $service->review_count = $service->reviews_count ?? 0;
-        }
+        $service->rating = $service->reviews_avg_rating ? (float) $service->reviews_avg_rating : null;
+        $service->review_count = $service->reviews_count ?? 0;
+
         return response()->json($service);
     }
 
@@ -103,13 +181,13 @@ class ServiceController extends Controller
             'category_id' => 'required|exists:categories,id',
             'title' => 'required|string|max:255',
             'description' => 'required|string',
+            'price' => 'nullable|numeric|min:0',
             'location' => 'nullable|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // Max 5MB
         ]);
 
-        $serviceData = $request->only(['category_id', 'title', 'description']);
+        $serviceData = $request->only(['category_id', 'title', 'description', 'price']);
         $serviceData['location'] = trim((string) $request->input('location', '')) ?: null;
-        $serviceData['price'] = 0; // Set default price to 0 since we're removing it from UI
 
         // Handle image upload
         if ($request->hasFile('image')) {
@@ -141,11 +219,12 @@ class ServiceController extends Controller
             'category_id' => 'sometimes|exists:categories,id',
             'title' => 'sometimes|string|max:255',
             'description' => 'sometimes|string',
+            'price' => 'nullable|numeric|min:0',
             'location' => 'nullable|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // Max 5MB
         ]);
 
-        $updateData = $request->only(['category_id', 'title', 'description']);
+        $updateData = $request->only(['category_id', 'title', 'description', 'price']);
         if ($request->has('location')) {
             $updateData['location'] = trim((string) $request->input('location', '')) ?: null;
         }
@@ -198,6 +277,7 @@ class ServiceController extends Controller
     public function myServices(Request $request)
     {
         $services = $request->user()->services()->with('category')->latest()->get();
+
         return response()->json($services);
     }
 
@@ -205,6 +285,7 @@ class ServiceController extends Controller
     {
         if ($this->hasCloudinaryConfig()) {
             $cloudinary = app(CloudinaryService::class);
+
             return $cloudinary->uploadServiceImage($file);
         }
 
@@ -220,10 +301,11 @@ class ServiceController extends Controller
     {
         if ($publicId && $this->hasCloudinaryConfig()) {
             app(CloudinaryService::class)->deleteImage($publicId);
+
             return;
         }
 
-        if (!$imageUrl) {
+        if (! $imageUrl) {
             return;
         }
 

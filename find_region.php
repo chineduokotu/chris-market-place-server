@@ -1,4 +1,5 @@
 <?php
+
 $project_ref = 'urjquzycytreqwdytpok';
 $password = 'chris-marketplac';
 $regions = [
@@ -19,7 +20,7 @@ $regions = [
     'sa-east-1',
     'ca-central-1',
     'me-central-1',
-    'af-south-1'
+    'af-south-1',
 ];
 $port = '6543';
 $db = 'postgres';
@@ -39,7 +40,7 @@ foreach ($regions as $region) {
         if (strpos($e->getMessage(), 'Tenant or user not found') !== false) {
             echo "Region mismatch.\n";
         } else {
-            echo "Error: " . $e->getMessage() . "\n";
+            echo 'Error: '.$e->getMessage()."\n";
         }
     }
 }

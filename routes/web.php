@@ -1,10 +1,10 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Models\Category;
+use App\Models\Service;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Response;
-use App\Models\Service;
-use App\Models\Category;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
@@ -14,15 +14,15 @@ Route::get('/sitemap.xml', function () {
     $baseUrl = env('FRONTEND_URL', config('app.url'));
 
     $staticUrls = [
-        $baseUrl . '/',
-        $baseUrl . '/services',
-        $baseUrl . '/how-it-works',
+        $baseUrl.'/',
+        $baseUrl.'/services',
+        $baseUrl.'/how-it-works',
     ];
 
     $categoryUrls = Category::select('id', 'updated_at')
         ->get()
         ->map(fn ($category) => [
-            'loc' => $baseUrl . '/services?category=' . $category->id,
+            'loc' => $baseUrl.'/services?category='.$category->id,
             'lastmod' => optional($category->updated_at)->toAtomString(),
         ])
         ->toArray();
@@ -30,7 +30,7 @@ Route::get('/sitemap.xml', function () {
     $serviceUrls = Service::select('id', 'updated_at')
         ->get()
         ->map(fn ($service) => [
-            'loc' => $baseUrl . '/services/' . $service->id,
+            'loc' => $baseUrl.'/services/'.$service->id,
             'lastmod' => optional($service->updated_at)->toAtomString(),
         ])
         ->toArray();
@@ -51,5 +51,6 @@ Route::fallback(function () {
     if (File::exists(public_path('index.html'))) {
         return File::get(public_path('index.html'));
     }
+
     return view('welcome');
 });

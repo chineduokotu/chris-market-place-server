@@ -9,7 +9,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasApiTokens;
+    use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
         'name',
@@ -66,18 +66,19 @@ class User extends Authenticatable
 
     public function getWhatsappLinkAttribute()
     {
-        if (!$this->whatsapp_number) {
+        if (! $this->whatsapp_number) {
             return null;
         }
         // Remove non-numeric characters for the link
         $cleanNumber = preg_replace('/[^0-9]/', '', $this->whatsapp_number);
+
         return "https://wa.me/{$cleanNumber}";
     }
 
     public function getVerificationLevelAttribute()
     {
-        $emailVerified = !is_null($this->email_verified_at);
-        $phoneOnFile = !empty($this->phone) || !empty($this->whatsapp_number);
+        $emailVerified = ! is_null($this->email_verified_at);
+        $phoneOnFile = ! empty($this->phone) || ! empty($this->whatsapp_number);
 
         if ($emailVerified && $phoneOnFile) {
             return 'verified';
@@ -85,6 +86,7 @@ class User extends Authenticatable
         if ($emailVerified) {
             return 'basic';
         }
+
         return 'unverified';
     }
 
@@ -92,10 +94,10 @@ class User extends Authenticatable
     {
         $badges = [];
 
-        if (!is_null($this->email_verified_at)) {
+        if (! is_null($this->email_verified_at)) {
             $badges[] = 'email_verified';
         }
-        if (!empty($this->phone) || !empty($this->whatsapp_number)) {
+        if (! empty($this->phone) || ! empty($this->whatsapp_number)) {
             $badges[] = 'phone_on_file';
         }
 

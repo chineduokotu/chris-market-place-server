@@ -47,6 +47,7 @@ class BookingController extends Controller
                 if ($booking->status !== 'accepted') {
                     $booking->provider->makeHidden(['phone', 'whatsapp_number']);
                 }
+
                 return $booking;
             });
 
@@ -59,6 +60,7 @@ class BookingController extends Controller
             ->with(['service.category', 'seeker', 'service.user'])
             ->latest()
             ->get();
+
         return response()->json($bookings);
     }
 

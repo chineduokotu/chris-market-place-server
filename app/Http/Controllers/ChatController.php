@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MessageRead;
+use App\Events\MessageSent;
 use App\Models\Conversation;
 use App\Models\Message;
-use App\Events\MessageSent;
-use App\Events\MessageRead;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -23,12 +23,13 @@ class ChatController extends Controller
             ->withCount([
                 'messages as unread_count' => function ($query) use ($userId) {
                     $query->where('sender_id', '!=', $userId)->whereNull('read_at');
-                }
+                },
             ])
             ->orderByDesc('last_message_at')
             ->get()
             ->map(function ($conversation) use ($userId) {
                 $otherUser = $conversation->getOtherUser($userId);
+
                 return [
                     'id' => $conversation->id,
                     'booking_id' => $conversation->booking_id,

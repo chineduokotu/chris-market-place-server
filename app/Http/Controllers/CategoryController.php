@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
-use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
     public function index()
     {
         $categories = Category::withCount('services')->get();
+
         return response()->json($categories);
     }
 
@@ -18,6 +18,7 @@ class CategoryController extends Controller
         $category = Category::where('slug', $slug)
             ->with(['services.user', 'services.category'])
             ->firstOrFail();
+
         return response()->json($category);
     }
 }

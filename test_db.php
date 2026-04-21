@@ -1,4 +1,5 @@
 <?php
+
 $project_ref = 'urjquzycytreqwdytpok';
 $password = 'chris-marketplac';
 $pooler_host = 'aws-0-us-east-1.pooler.supabase.com'; // Trying us-east-1
@@ -16,7 +17,7 @@ foreach ($ports as $port) {
         $pdo = new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         echo "SUCCESS on Port $port!\n";
     } catch (PDOException $e) {
-        echo "Failed on Port $port: " . $e->getMessage() . "\n";
+        echo "Failed on Port $port: ".$e->getMessage()."\n";
     }
 }
 
@@ -26,7 +27,7 @@ try {
     $pdo = new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
     echo "Connected successfully to Pooler!\n";
 } catch (PDOException $e) {
-    echo "Pooler connection failed: " . $e->getMessage() . "\n";
+    echo 'Pooler connection failed: '.$e->getMessage()."\n";
 
     // Try eu-central-1 just in case
     $pooler_host = 'aws-0-eu-central-1.pooler.supabase.com';
@@ -36,6 +37,6 @@ try {
         $pdo = new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         echo "Connected successfully to eu-central-1 Pooler!\n";
     } catch (PDOException $e2) {
-        echo "eu-central-1 Pooler failed: " . $e2->getMessage() . "\n";
+        echo 'eu-central-1 Pooler failed: '.$e2->getMessage()."\n";
     }
 }

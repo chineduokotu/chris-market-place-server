@@ -17,17 +17,14 @@ class AuthController extends Controller
             'password' => 'required|string|min:8|confirmed',
         ]);
 
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'current_role' => 'seeker',
+        ]);
 
-     $user=User::create([
-        'name'=> $request-> name,
-        'email'=> $request-> email,
-        'password'=> Hash::make($request-> password),
-        'current_role'=>'seeker',
-     ]); 
-
-     $token=$user->createToken('auth_token')->plainTextToken;
-
-
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'user' => $user,
@@ -44,7 +41,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);

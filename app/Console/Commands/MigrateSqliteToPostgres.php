@@ -31,7 +31,7 @@ class MigrateSqliteToPostgres extends Command
         // Ensure sqlite connection points to the correct file
         config([
             'database.connections.sqlite.url' => null,
-            'database.connections.sqlite.database' => database_path('database.sqlite')
+            'database.connections.sqlite.database' => database_path('database.sqlite'),
         ]);
 
         // Set pgsql credentials explicitly to bypass .env loading issues
@@ -55,6 +55,7 @@ class MigrateSqliteToPostgres extends Command
 
             if ($tableName === 'migrations') {
                 $this->line("Skipping $tableName table.");
+
                 continue;
             }
 
@@ -69,16 +70,16 @@ class MigrateSqliteToPostgres extends Command
                     return (array) $row;
                 }, $rows->toArray());
 
-                if (!empty($data)) {
+                if (! empty($data)) {
                     \DB::connection($destination)->table($tableName)->insert($data);
                 }
             });
         }
 
-        $this->info("Resetting Postgres sequences...");
+        $this->info('Resetting Postgres sequences...');
         $this->resetSequences($destination);
 
-        $this->info("Migration completed successfully!");
+        $this->info('Migration completed successfully!');
     }
 
     protected function resetSequences($connection)
@@ -90,7 +91,7 @@ class MigrateSqliteToPostgres extends Command
             $columns = \DB::connection($connection)->select("SELECT column_name, column_default FROM information_schema.columns WHERE table_name = ? AND column_default LIKE 'nextval%'", [$tableName]);
 
             foreach ($columns as $column) {
-                \DB::connection($connection)->statement("SELECT setval(pg_get_serial_sequence(?, ?), (SELECT MAX(" . $column->column_name . ") FROM " . $tableName . "))", [$tableName, $column->column_name]);
+                \DB::connection($connection)->statement('SELECT setval(pg_get_serial_sequence(?, ?), (SELECT MAX('.$column->column_name.') FROM '.$tableName.'))', [$tableName, $column->column_name]);
             }
         }
     }
