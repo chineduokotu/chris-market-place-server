@@ -15,6 +15,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'is_admin',
+        'status',
         'current_role',
         'phone',
         'whatsapp_number',
@@ -24,7 +26,15 @@ class User extends Authenticatable
 
     protected $attributes = [
         'current_role' => 'seeker',
+        'is_admin' => false,
+        'status' => 'active',
     ];
+
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_SUSPENDED = 'suspended';
+
+    public const STATUS_BANNED = 'banned';
 
     /**
      * The attributes that should be hidden for serialization.
@@ -45,6 +55,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'is_admin' => 'boolean',
             'password' => 'hashed',
         ];
     }
@@ -62,6 +73,11 @@ class User extends Authenticatable
     public function bookingsAsProvider()
     {
         return $this->hasMany(Booking::class, 'provider_id');
+    }
+
+    public function adminActivityLogs()
+    {
+        return $this->hasMany(AdminActivityLog::class, 'admin_id');
     }
 
     public function getWhatsappLinkAttribute()

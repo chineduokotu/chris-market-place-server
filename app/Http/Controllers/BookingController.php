@@ -43,13 +43,7 @@ class BookingController extends Controller
             ->with(['service.category', 'provider', 'service.user'])
             ->latest()
             ->get()
-            ->map(function ($booking) {
-                if ($booking->status !== 'accepted') {
-                    $booking->provider->makeHidden(['phone', 'whatsapp_number']);
-                }
-
-                return $booking;
-            });
+            ->map(fn ($booking) => $this->sanitizeBookingContactDetails($booking));
 
         return response()->json($bookings);
     }
@@ -59,7 +53,8 @@ class BookingController extends Controller
         $bookings = Booking::where('provider_id', $request->user()->id)
             ->with(['service.category', 'seeker', 'service.user'])
             ->latest()
-            ->get();
+            ->get()
+            ->map(fn ($booking) => $this->sanitizeBookingContactDetails($booking));
 
         return response()->json($bookings);
     }
@@ -93,10 +88,21 @@ class BookingController extends Controller
 
         $booking->load(['service', 'seeker', 'provider']);
 
-        if ($booking->status !== 'accepted') {
-            $booking->provider->makeHidden(['phone', 'whatsapp_number']);
+        return response()->json($this->sanitizeBookingContactDetails($booking));
+    }
+
+    protected function sanitizeBookingContactDetails(Booking $booking): Booking
+    {
+        if ($booking->status === 'accepted') {
+            return $booking;
         }
 
-        return response()->json($booking);
+        foreach ([$booking->provider, $booking->seeker, $booking->service?->user] as $user) {
+            if ($user) {
+                $user->makeHidden(['phone', 'whatsapp_number', 'whatsapp_link']);
+            }
+        }
+
+        return $booking;
     }
 }

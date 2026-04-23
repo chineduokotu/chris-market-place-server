@@ -9,7 +9,19 @@ class Service extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'category_id', 'title', 'description', 'location', 'price', 'image', 'image_public_id'];
+    public const STATUS_PENDING = 'pending';
+
+    public const STATUS_APPROVED = 'approved';
+
+    public const STATUS_HIDDEN = 'hidden';
+
+    public const STATUS_REJECTED = 'rejected';
+
+    protected $fillable = ['user_id', 'category_id', 'title', 'description', 'location', 'price', 'status', 'moderation_note', 'image', 'image_public_id'];
+
+    protected $attributes = [
+        'status' => self::STATUS_APPROVED,
+    ];
 
     public function user()
     {

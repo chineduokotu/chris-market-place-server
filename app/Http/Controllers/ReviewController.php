@@ -12,6 +12,7 @@ class ReviewController extends Controller
     {
 
         $reviews = Review::with('seeker:id,name')
+            ->where('status', Review::STATUS_VISIBLE)
             ->where('service_id', $serviceId)
             ->latest()
             ->get()
@@ -35,6 +36,7 @@ class ReviewController extends Controller
     {
 
         $reviews = Review::with('seeker:id,name')
+            ->where('status', Review::STATUS_VISIBLE)
             ->where('provider_id', $providerId)
             ->latest()
             ->get()

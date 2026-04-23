@@ -9,6 +9,12 @@ class Review extends Model
 {
     use HasFactory;
 
+    public const STATUS_VISIBLE = 'visible';
+
+    public const STATUS_HIDDEN = 'hidden';
+
+    public const STATUS_FLAGGED = 'flagged';
+
     protected $fillable = [
         'booking_id',
         'service_id',
@@ -16,6 +22,12 @@ class Review extends Model
         'seeker_id',
         'rating',
         'comment',
+        'status',
+        'moderation_note',
+    ];
+
+    protected $attributes = [
+        'status' => self::STATUS_VISIBLE,
     ];
 
     public function booking()

@@ -15,6 +15,7 @@ class ServiceController extends Controller
     public function index(Request $request)
     {
         $query = Service::query()
+            ->where('services.status', Service::STATUS_APPROVED)
             ->leftJoin('users', 'services.user_id', '=', 'users.id')
             ->leftJoin('categories', 'services.category_id', '=', 'categories.id')
             ->select([
@@ -162,7 +163,7 @@ class ServiceController extends Controller
 
     public function show($id)
     {
-        $serviceQuery = Service::with(['user', 'category']);
+        $serviceQuery = Service::where('status', Service::STATUS_APPROVED)->with(['user', 'category']);
         $serviceQuery->withAvg('reviews', 'rating')->withCount('reviews');
         $service = $serviceQuery->findOrFail($id);
         $service->rating = $service->reviews_avg_rating ? (float) $service->reviews_avg_rating : null;

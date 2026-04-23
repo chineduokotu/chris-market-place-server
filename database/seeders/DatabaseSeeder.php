@@ -17,5 +17,18 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        if (app()->environment('local')) {
+            User::firstOrCreate(
+                ['email' => 'admin@example.com'],
+                [
+                    'name' => 'Admin User',
+                    'password' => 'password',
+                    'current_role' => 'seeker',
+                    'is_admin' => true,
+                    'status' => 'active',
+                ]
+            );
+        }
     }
 }
